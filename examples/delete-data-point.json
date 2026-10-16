@@ -1,0 +1,37 @@
+{
+	"name": "past dev: delete a data point",
+	"nodes": [
+		{
+			"parameters": {
+				"httpMethod": "POST",
+				"path": "past-dev-delete",
+				"options": {}
+			},
+			"id": "8b4d2e61-6f0a-4f8e-a3d2-2c9e1f0b5c01",
+			"name": "Webhook",
+			"type": "n8n-nodes-base.webhook",
+			"typeVersion": 2.2,
+			"position": [0, 0],
+			"webhookId": "8b4d2e61-6f0a-4f8e-a3d2-2c9e1f0b5c01"
+		},
+		{
+			"parameters": {
+				"resource": "memory",
+				"operation": "deleteDataPoint",
+				"sourceId": "={{ $json.body.messageId }}"
+			},
+			"id": "8b4d2e61-6f0a-4f8e-a3d2-2c9e1f0b5c02",
+			"name": "Delete data point",
+			"type": "n8n-nodes-pastdotdev.pastDev",
+			"typeVersion": 1,
+			"position": [240, 0]
+		}
+	],
+	"connections": {
+		"Webhook": {
+			"main": [[{ "node": "Delete data point", "type": "main", "index": 0 }]]
+		}
+	},
+	"settings": { "executionOrder": "v1" },
+	"pinData": {}
+}

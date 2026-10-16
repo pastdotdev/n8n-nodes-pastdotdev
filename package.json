@@ -1,0 +1,64 @@
+{
+	"name": "n8n-nodes-pastdotdev",
+	"version": "0.1.0",
+	"description": "past dev is a memory API for AI agents. This n8n node ingests data points, recalls memories and deletes data points.",
+	"license": "MIT",
+	"homepage": "https://past.dev",
+	"keywords": [
+		"n8n-community-node-package",
+		"n8n",
+		"past dev",
+		"memory",
+		"ai-agent",
+		"recall",
+		"ingest"
+	],
+	"author": {
+		"name": "past.dev",
+		"email": "louis@past.dev",
+		"url": "https://past.dev"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/pastdotdev/n8n-nodes-pastdotdev.git"
+	},
+	"bugs": {
+		"url": "https://github.com/pastdotdev/n8n-nodes-pastdotdev/issues"
+	},
+	"scripts": {
+		"build": "n8n-node build",
+		"build:watch": "tsc --watch",
+		"dev": "n8n-node dev",
+		"lint": "n8n-node lint",
+		"lint:fix": "n8n-node lint --fix",
+		"test": "n8n-node build && node --test test/*.test.cjs",
+		"release": "n8n-node release",
+		"prepublishOnly": "n8n-node prerelease",
+		"scan": "node scripts/scan.mjs"
+	},
+	"files": [
+		"dist",
+		"!dist/tsconfig.tsbuildinfo"
+	],
+	"n8n": {
+		"n8nNodesApiVersion": 1,
+		"strict": true,
+		"credentials": [
+			"dist/credentials/PastDevApi.credentials.js"
+		],
+		"nodes": [
+			"dist/nodes/PastDev/PastDev.node.js"
+		]
+	},
+	"devDependencies": {
+		"@n8n/node-cli": "0.52.5",
+		"eslint": "9.32.0",
+		"ignore": "^7.0.12",
+		"prettier": "3.6.2",
+		"release-it": "^21.1.0",
+		"typescript": "5.9.2"
+	},
+	"peerDependencies": {
+		"n8n-workflow": "*"
+	}
+}

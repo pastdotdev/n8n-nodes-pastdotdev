@@ -1,0 +1,48 @@
+{
+	"name": "past dev: ingest messages from a webhook",
+	"nodes": [
+		{
+			"parameters": {
+				"httpMethod": "POST",
+				"path": "past-dev-ingest",
+				"options": {}
+			},
+			"id": "6d0f5a0e-1b8c-4c55-9f43-1f1a0c2b7a01",
+			"name": "Webhook",
+			"type": "n8n-nodes-base.webhook",
+			"typeVersion": 2.2,
+			"position": [0, 0],
+			"webhookId": "6d0f5a0e-1b8c-4c55-9f43-1f1a0c2b7a01"
+		},
+		{
+			"parameters": {
+				"resource": "memory",
+				"operation": "ingest",
+				"content": "={{ $json.body.text }}",
+				"identity": {
+					"__rl": true,
+					"mode": "id",
+					"value": "={{ $json.body.userId }}"
+				},
+				"additionalFields": {
+					"id": "={{ $json.body.messageId }}",
+					"timestamp": "={{ $json.body.sentAt }}",
+					"label": "=Message from {{ $json.body.userId }}",
+					"metadata": "={{ JSON.stringify({ channel: 'webhook' }) }}"
+				}
+			},
+			"id": "6d0f5a0e-1b8c-4c55-9f43-1f1a0c2b7a02",
+			"name": "Ingest message",
+			"type": "n8n-nodes-pastdotdev.pastDev",
+			"typeVersion": 1,
+			"position": [240, 0]
+		}
+	],
+	"connections": {
+		"Webhook": {
+			"main": [[{ "node": "Ingest message", "type": "main", "index": 0 }]]
+		}
+	},
+	"settings": { "executionOrder": "v1" },
+	"pinData": {}
+}

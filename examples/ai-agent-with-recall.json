@@ -1,0 +1,122 @@
+{
+	"name": "past dev: AI Agent with Recall as a tool",
+	"nodes": [
+		{
+			"parameters": {
+				"httpMethod": "POST",
+				"path": "past-dev-agent",
+				"responseMode": "responseNode",
+				"options": {}
+			},
+			"id": "3f6c1a9b-2d47-4e8a-9b1c-5e7d0a2f4b01",
+			"name": "Webhook",
+			"type": "n8n-nodes-base.webhook",
+			"typeVersion": 2.2,
+			"position": [0, 0],
+			"webhookId": "3f6c1a9b-2d47-4e8a-9b1c-5e7d0a2f4b01"
+		},
+		{
+			"parameters": {
+				"promptType": "define",
+				"text": "={{ $json.body.message }}",
+				"options": {
+					"systemMessage": "You are a helpful assistant. Before you answer a question about earlier work, decisions or facts, call the past dev tool to recall what is known. Cite the source IDs that you use."
+				}
+			},
+			"id": "3f6c1a9b-2d47-4e8a-9b1c-5e7d0a2f4b02",
+			"name": "AI Agent",
+			"type": "@n8n/n8n-nodes-langchain.agent",
+			"typeVersion": 3.1,
+			"position": [240, 0]
+		},
+		{
+			"parameters": {
+				"model": {
+					"__rl": true,
+					"mode": "list",
+					"value": "gpt-4.1-mini"
+				},
+				"options": {}
+			},
+			"id": "3f6c1a9b-2d47-4e8a-9b1c-5e7d0a2f4b03",
+			"name": "OpenAI Chat Model",
+			"type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+			"typeVersion": 1.3,
+			"position": [160, 220]
+		},
+		{
+			"parameters": {
+				"descriptionType": "manual",
+				"toolDescription": "Recall what is known from memory about earlier work, decisions and facts. Give a precise question as the query.",
+				"resource": "memory",
+				"operation": "recall",
+				"query": "={{ $fromAI('query', 'The question to look up in memory', 'string') }}",
+				"identity": {
+					"__rl": true,
+					"mode": "id",
+					"value": "={{ $('Webhook').item.json.body.userId }}"
+				},
+				"options": {
+					"limit": 10
+				}
+			},
+			"id": "3f6c1a9b-2d47-4e8a-9b1c-5e7d0a2f4b04",
+			"name": "Recall from past dev",
+			"type": "n8n-nodes-pastdotdev.pastDevTool",
+			"typeVersion": 1,
+			"position": [400, 220]
+		},
+		{
+			"parameters": {
+				"resource": "memory",
+				"operation": "ingest",
+				"content": "=User: {{ $('Webhook').item.json.body.message }}\nAssistant: {{ $json.output }}",
+				"identity": {
+					"__rl": true,
+					"mode": "id",
+					"value": "={{ $('Webhook').item.json.body.userId }}"
+				},
+				"additionalFields": {
+					"timestamp": "={{ $now.toISO() }}",
+					"label": "Agent conversation"
+				}
+			},
+			"id": "3f6c1a9b-2d47-4e8a-9b1c-5e7d0a2f4b05",
+			"name": "Ingest the exchange",
+			"type": "n8n-nodes-pastdotdev.pastDev",
+			"typeVersion": 1,
+			"position": [600, 0]
+		},
+		{
+			"parameters": {
+				"respondWith": "json",
+				"responseBody": "={{ { answer: $('AI Agent').item.json.output } }}",
+				"options": {}
+			},
+			"id": "3f6c1a9b-2d47-4e8a-9b1c-5e7d0a2f4b06",
+			"name": "Respond to Webhook",
+			"type": "n8n-nodes-base.respondToWebhook",
+			"typeVersion": 1.5,
+			"position": [840, 0]
+		}
+	],
+	"connections": {
+		"Webhook": {
+			"main": [[{ "node": "AI Agent", "type": "main", "index": 0 }]]
+		},
+		"OpenAI Chat Model": {
+			"ai_languageModel": [[{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]]
+		},
+		"Recall from past dev": {
+			"ai_tool": [[{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]]
+		},
+		"AI Agent": {
+			"main": [[{ "node": "Ingest the exchange", "type": "main", "index": 0 }]]
+		},
+		"Ingest the exchange": {
+			"main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+		}
+	},
+	"settings": { "executionOrder": "v1" },
+	"pinData": {}
+}

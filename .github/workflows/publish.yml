@@ -1,0 +1,76 @@
+# Publishes n8n-nodes-pastdotdev to npm, with npm provenance, when a version tag is pushed.
+#
+# n8n requires this for verified community nodes since 1 May 2026: the package must be published
+# from GitHub Actions with a provenance statement, so that anyone can check which workflow, which
+# repository and which commit built it.
+#
+# Authentication to npm, two ways:
+#   A. Trusted publishing (the normal way). On npmjs.com, open the package settings, then
+#      Publish access > Trusted Publishers > Add a publisher > GitHub Actions:
+#        Repository owner: pastdotdev
+#        Repository name:  n8n-nodes-pastdotdev
+#        Workflow name:    publish.yml
+#        Environment:      (empty)
+#      Do not set the NPM_TOKEN secret. npm exchanges the OIDC token of this job.
+#   B. A granular access token (only for the first publish, when the package does not exist on
+#      npm yet and has no trusted publisher). Save it as the NPM_TOKEN secret of the repository,
+#      publish, then set up A and delete the secret and the token.
+# Both ways publish with provenance: the provenance comes from the OIDC token of this job.
+#
+# Tags: release-it (npm run release) makes tags without a "v", for example 0.1.0.
+
+name: Publish
+
+on:
+  push:
+    tags:
+      - '*.*.*'
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+
+    permissions:
+      # Required to mint the OIDC token for trusted publishing and for the provenance statement.
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Trusted publishing needs Node 22.14 or later and npm 11.5.1 or later.
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+
+      - name: Update npm
+        run: npm install --global npm@11
+
+      - name: Check that the tag is the package version
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "$version" != "$GITHUB_REF_NAME" ]; then
+            echo "The tag $GITHUB_REF_NAME is not the version $version in package.json."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Publish
+        # n8n-node release sees GITHUB_ACTIONS, runs lint and build, then runs npm publish with
+        # NPM_CONFIG_PROVENANCE=true.
+        run: |
+          if [ -n "$NPM_TOKEN" ]; then
+            npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
+          fi
+          npm run release
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
