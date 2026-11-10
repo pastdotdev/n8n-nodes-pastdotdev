@@ -1,0 +1,306 @@
+{
+  "name": "Draft Gmail replies with full customer history using past.dev and OpenAI",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Gmail reply drafts that know the customer\n\nFor support and sales teams. Every reply draft starts from what your company already knows about the sender: earlier emails, promises, prices and open problems.\n\n### How it works\n- A new email with your Gmail label starts the workflow.\n- The AI Agent calls past.dev **Recall** as a tool and asks what is known about the sender and the topic.\n- The agent writes a reply, and Gmail saves it as a draft in the same thread. Nothing is sent.\n- The new email is saved to past.dev with its date and message ID, so the next draft knows about it too.\n\n### Setup\n1. Self-hosted n8n: open **Settings > Community Nodes**, select **Install** and enter `n8n-nodes-pastdotdev` (tested with 0.1.0 on n8n 2.47). [Installation guide](https://docs.n8n.io/integrations/community-nodes/installation/)\n2. Create a project API key in the [past.dev console](https://app.past.dev) and add it as a **Past Dev API** credential in each past.dev node.\n3. Add your Gmail and OpenAI credentials.\n4. In **New email with label**, choose the label to watch, for example \"Leads\" or \"Support\".\n5. In **Config**, set who the drafts are for (`reader_identity`) and your company and tone.\n\n### Customization\n- Ingest your sent emails too, with a second Gmail Trigger.\n- Add CRM notes or tickets to the same memory, and the drafts use them.\n- Set an Audience in **Save the email to memory** for sensitive mailboxes.\n",
+        "height": 780,
+        "width": 460,
+        "color": 1
+      },
+      "id": "88e380f7-61da-5154-93f6-e61a0c290e8e",
+      "name": "Sticky Note Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -780,
+        -420
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Watch one label\nFilter at the trigger: fewer, better emails give better memory and cost less.",
+        "height": 300,
+        "width": 460,
+        "color": 7
+      },
+      "id": "426a2a5b-22f6-5efb-a9ef-ddb890babad7",
+      "name": "Sticky Note A",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -280,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Draft with the customer's history\nThe agent recalls before it writes. The reader identity comes from Config, never from the model.",
+        "height": 520,
+        "width": 480,
+        "color": 7
+      },
+      "id": "330497d0-23f2-5dac-b27a-20e04ad7b447",
+      "name": "Sticky Note B",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        220,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Save a draft, then remember\nThe draft stays in the thread for a person to check. The incoming email goes into memory.",
+        "height": 300,
+        "width": 480,
+        "color": 7
+      },
+      "id": "3ffcb541-151b-5c90-80a2-98f943e14404",
+      "name": "Sticky Note C",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        740,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {},
+        "options": {}
+      },
+      "id": "96583150-1c87-5598-89b3-e32f93900e69",
+      "name": "New email with label",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1fb12ec-6311-5319-9b19-f6e82e6af8dd",
+              "name": "reader_identity",
+              "value": "support-team",
+              "type": "string"
+            },
+            {
+              "id": "c8940a4c-90ae-511d-83e8-850f3fab0767",
+              "name": "company_name",
+              "value": "Your company",
+              "type": "string"
+            },
+            {
+              "id": "b64890f9-bc27-5f73-bdcb-dd6a57677fac",
+              "name": "tone",
+              "value": "friendly, short and concrete",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "33d96164-e5c0-56dc-a0d5-7858e4bb296c",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a reply to this email.\n\nFrom: {{ $('New email with label').item.json.from.text }}\nSubject: {{ $('New email with label').item.json.subject }}\nReceived: {{ $('New email with label').item.json.date }}\n\n{{ $('New email with label').item.json.text }}",
+        "options": {
+          "systemMessage": "=You write email reply drafts for {{ $json.company_name }}. A person checks every draft before it is sent.\n\nBefore you write, call the tool \"Recall from past.dev\" at least once. Ask what is known about the sender and their company, and about the topic of the email: earlier emails, promises, prices, open problems. Use only what the memory returns and what the email says. Do not invent facts, prices or dates. If the memory has nothing about the sender, write a reply that does not pretend to know them.\n\nTone: {{ $json.tone }}. Return only the body of the reply as plain text, with no subject line."
+        }
+      },
+      "id": "c5ebc1df-1f0c-5575-9843-c320fbe05e94",
+      "name": "Draft the reply",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        300,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "id": "0db43264-4900-5c33-8f67-cc691ae0f9ec",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        260,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Recall what the company knows about a person, a company or a topic: earlier emails, promises, prices and open problems. Give a precise question as the query.",
+        "resource": "memory",
+        "operation": "recall",
+        "query": "={{ $fromAI('query', 'The question to look up in memory', 'string') }}",
+        "identity": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Config').item.json.reader_identity }}"
+        },
+        "options": {
+          "limit": 10
+        }
+      },
+      "id": "edb3aa4e-5eba-5cd7-898d-3a5e43c15dd4",
+      "name": "Recall from past.dev",
+      "type": "n8n-nodes-pastdotdev.pastDevTool",
+      "typeVersion": 1,
+      "position": [
+        500,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "=Re: {{ $('New email with label').item.json.subject }}",
+        "message": "={{ $json.output }}",
+        "options": {
+          "threadId": "={{ $('New email with label').item.json.threadId }}",
+          "sendTo": "={{ $('New email with label').item.json.from.value[0].address }}"
+        }
+      },
+      "id": "1fa80dab-54da-50f7-a421-99330f6c2bab",
+      "name": "Save the draft in the thread",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        800,
+        0
+      ],
+      "webhookId": "96230daa-1d3e-5023-a9a8-99ee5c91c77a"
+    },
+    {
+      "parameters": {
+        "resource": "memory",
+        "operation": "ingest",
+        "content": "=Email from {{ $('New email with label').item.json.from.text }}\nSubject: {{ $('New email with label').item.json.subject }}\n\n{{ $('New email with label').item.json.text }}",
+        "identity": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('New email with label').item.json.from.value[0].address }}"
+        },
+        "additionalFields": {
+          "id": "=gmail-{{ $('New email with label').item.json.id }}",
+          "timestamp": "={{ new Date($('New email with label').item.json.date).toISOString() }}",
+          "label": "=Email: {{ $('New email with label').item.json.subject }}"
+        }
+      },
+      "id": "1321ed96-9e1a-5fbc-b2cd-afdf23ccf62f",
+      "name": "Save the email to memory",
+      "type": "n8n-nodes-pastdotdev.pastDev",
+      "typeVersion": 1,
+      "position": [
+        1020,
+        0
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "maxTries": 3
+    }
+  ],
+  "connections": {
+    "New email with label": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Draft the reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Draft the reply",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recall from past.dev": {
+      "ai_tool": [
+        [
+          {
+            "node": "Draft the reply",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft the reply": {
+      "main": [
+        [
+          {
+            "node": "Save the draft in the thread",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save the draft in the thread": {
+      "main": [
+        [
+          {
+            "node": "Save the email to memory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
