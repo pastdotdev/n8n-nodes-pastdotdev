@@ -1,0 +1,399 @@
+{
+  "name": "Send Slack briefs before Calendly calls with past.dev memory and OpenAI",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## A brief in Slack before every Calendly call\n\nFor sales and customer success people who walk into calls and want to know what was said last time, what is still open, and who else on the team talked to this person.\n\n### How it works\n- A new Calendly booking starts the workflow.\n- past.dev **Recall** returns what your company knows about the invitee and their company, with dates and sources.\n- If there is history, OpenAI writes a short brief from it. If there is none, the brief says so and does not invent one.\n- Slack gets the brief, and the booking is saved to past.dev for next time.\n\n### Setup\n1. Self-hosted n8n: open **Settings > Community Nodes**, select **Install** and enter `n8n-nodes-pastdotdev` (tested with 0.1.0 on n8n 2.47). [Installation guide](https://docs.n8n.io/integrations/community-nodes/installation/)\n2. Create a project API key in the [past.dev console](https://app.past.dev) and add it as a **Past Dev API** credential in each past.dev node.\n3. Add your Calendly, Slack and OpenAI credentials.\n4. In **Config**, set `slack_channel` (a channel ID or your own user ID) and `reader_identity`.\n\n### Customization\n- The brief is only as good as the memory. Fill it with the Gmail, Slack or Drive templates of past.dev, or with your CRM notes.\n- Change the brief format in **Write the brief**.\n- Use the Occurred From option of Recall to limit the brief to the last 90 days.\n",
+        "height": 760,
+        "width": 460,
+        "color": 1
+      },
+      "id": "eaea39cc-209b-50e1-8e9b-5836c262421f",
+      "name": "Sticky Note Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -800,
+        -440
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## New booking\nConfig holds the Slack target and the reader identity.",
+        "height": 300,
+        "width": 460,
+        "color": 7
+      },
+      "id": "7107f1d1-b1de-5fb1-ab29-cc4ba7629d74",
+      "name": "Sticky Note A",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -300,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Recall, then branch\nNo history means no model call and no invented brief.",
+        "height": 520,
+        "width": 460,
+        "color": 7
+      },
+      "id": "458419bc-4a7a-5f3b-aaac-930c41cdbd75",
+      "name": "Sticky Note B",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        200,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Write and send the brief\nThe model only sees what the memory returned.",
+        "height": 400,
+        "width": 520,
+        "color": 7
+      },
+      "id": "118e0c03-464d-569d-b101-d807f121facf",
+      "name": "Sticky Note C",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        700,
+        -340
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Remember the booking\nThe next brief knows this call happened.",
+        "height": 300,
+        "width": 760,
+        "color": 7
+      },
+      "id": "3c000662-1580-524b-92b8-82e26cebf13e",
+      "name": "Sticky Note D",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        700,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "scope": "user",
+        "events": [
+          "invitee.created"
+        ]
+      },
+      "id": "bbaaa3c8-578d-5884-b749-106d0e53f79a",
+      "name": "New Calendly booking",
+      "type": "n8n-nodes-base.calendlyTrigger",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        0
+      ],
+      "webhookId": "f2111300-9cbc-5092-9bc2-e06805ce2da7"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fb61f115-7aa5-5a4f-925c-b79845a96cbb",
+              "name": "slack_channel",
+              "value": "C0123456789",
+              "type": "string"
+            },
+            {
+              "id": "aa74f639-b5ee-588e-87d8-b88203f06219",
+              "name": "reader_identity",
+              "value": "sales-team",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4a584f14-7585-57da-8890-8c07ee6403f6",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -20,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "memory",
+        "operation": "recall",
+        "query": "=Everything we know about {{ $('New Calendly booking').item.json.payload.name }} ({{ $('New Calendly booking').item.json.payload.email }}) and their company: earlier conversations, promises, prices, objections and open problems.",
+        "identity": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.reader_identity }}"
+        },
+        "options": {
+          "limit": 20
+        }
+      },
+      "id": "ff8d022a-682e-56bf-8a48-4070f9dea5cd",
+      "name": "Recall the invitee's history",
+      "type": "n8n-nodes-pastdotdev.pastDev",
+      "typeVersion": 1,
+      "position": [
+        260,
+        0
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "maxTries": 3
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "77a42fac-07fa-5018-8fc3-00465becb626",
+              "leftValue": "={{ $json.context }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "ffd9de36-4ebe-5dc1-b010-4419994253ee",
+      "name": "Is there any history?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a brief for a call with {{ $('New Calendly booking').item.json.payload.name }} ({{ $('New Calendly booking').item.json.payload.email }}).\nMeeting: {{ $('New Calendly booking').item.json.payload.scheduled_event.name }}, {{ $('New Calendly booking').item.json.payload.scheduled_event.start_time }}\n\nUse only these memories. Give the date of each fact. Do not invent anything.\n\n{{ $json.context }}\n\nFormat for Slack, under 150 words:\n*Who*: one line\n*Last time*: up to 3 bullets\n*Open points and promises*: up to 3 bullets\n*Careful*: prices or facts that changed"
+      },
+      "id": "192f23d5-9bb1-5446-976b-a92fee05c816",
+      "name": "Write the brief",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        780,
+        -220
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "id": "30f531d9-f416-59b2-a350-83ee42d70667",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        800,
+        -20
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Config').item.json.slack_channel }}"
+        },
+        "text": "=:calendar: *Call with {{ $('New Calendly booking').item.json.payload.name }}*, {{ $('New Calendly booking').item.json.payload.scheduled_event.start_time }}\n\n{{ $json.text }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "68dcd255-0865-58de-8f7e-0b5edaba558d",
+      "name": "Send the brief to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1080,
+        -220
+      ],
+      "webhookId": "91c1ce58-0bb7-5b35-8fcc-30dcfc51da9c"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Config').item.json.slack_channel }}"
+        },
+        "text": "=:calendar: *Call with {{ $('New Calendly booking').item.json.payload.name }}* ({{ $('New Calendly booking').item.json.payload.email }}), {{ $('New Calendly booking').item.json.payload.scheduled_event.start_time }}\n\nNo history in memory yet. This is a first contact.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "f870f301-e381-5696-ae99-3cf3135e1d43",
+      "name": "Say there is no history yet",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        780,
+        220
+      ],
+      "webhookId": "89578c57-634c-5eae-9cd7-3d054bff816c"
+    },
+    {
+      "parameters": {
+        "resource": "memory",
+        "operation": "ingest",
+        "content": "={{ $('New Calendly booking').item.json.payload.name }} ({{ $('New Calendly booking').item.json.payload.email }}) booked \"{{ $('New Calendly booking').item.json.payload.scheduled_event.name }}\" for {{ $('New Calendly booking').item.json.payload.scheduled_event.start_time }}.",
+        "identity": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('New Calendly booking').item.json.payload.email }}"
+        },
+        "additionalFields": {
+          "id": "=calendly-{{ $('New Calendly booking').item.json.payload.uri.split('/').pop() }}",
+          "timestamp": "={{ $('New Calendly booking').item.json.payload.created_at }}",
+          "label": "=Calendly booking: {{ $('New Calendly booking').item.json.payload.scheduled_event.name }}"
+        }
+      },
+      "id": "9b905a4d-4784-52f9-8aca-6189763d4ff1",
+      "name": "Save the booking to memory",
+      "type": "n8n-nodes-pastdotdev.pastDev",
+      "typeVersion": 1,
+      "position": [
+        1260,
+        220
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "maxTries": 3
+    }
+  ],
+  "connections": {
+    "New Calendly booking": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Recall the invitee's history",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recall the invitee's history": {
+      "main": [
+        [
+          {
+            "node": "Is there any history?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is there any history?": {
+      "main": [
+        [
+          {
+            "node": "Write the brief",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Say there is no history yet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Write the brief",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write the brief": {
+      "main": [
+        [
+          {
+            "node": "Send the brief to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send the brief to Slack": {
+      "main": [
+        [
+          {
+            "node": "Save the booking to memory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Say there is no history yet": {
+      "main": [
+        [
+          {
+            "node": "Save the booking to memory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

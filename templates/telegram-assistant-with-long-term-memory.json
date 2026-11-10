@@ -1,0 +1,341 @@
+{
+  "name": "Run a Telegram AI assistant with long-term memory using past.dev and OpenAI",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Telegram AI assistant with long-term memory\n\nFor people who want a personal or team assistant in Telegram that still knows next month what you told it today.\n\n### How it works\n- A Telegram message starts the workflow.\n- The AI Agent calls past.dev **Recall** as a tool when it needs something from earlier conversations. It gets the facts with their dates and sources.\n- Simple Memory keeps the flow of the current chat.\n- The answer goes back to Telegram.\n- The question and the answer are saved to past.dev, so the next session knows about them.\n\n### Setup\n1. Self-hosted n8n: open **Settings > Community Nodes**, select **Install** and enter `n8n-nodes-pastdotdev` (tested with 0.1.0 on n8n 2.47). [Installation guide](https://docs.n8n.io/integrations/community-nodes/installation/)\n2. Create a project API key in the [past.dev console](https://app.past.dev) and add it as a **Past Dev API** credential in each past.dev node.\n3. Add your Telegram bot token (from @BotFather) and your OpenAI credential.\n4. In **Receive Telegram message**, restrict the bot to your own user IDs.\n\n### Customization\n- Change the system message in **Answer with memory**.\n- Use another chat model.\n- Without an Audience, every user of the bot reads the same project memory. For private memory per user, set an Audience in **Save the exchange to memory**.\n",
+        "height": 760,
+        "width": 460,
+        "color": 1
+      },
+      "id": "766ba381-f3b6-5710-85f4-bd885be1e0b7",
+      "name": "Sticky Note Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -760,
+        -420
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Receive the message\nOnly text messages continue.",
+        "height": 300,
+        "width": 440,
+        "color": 7
+      },
+      "id": "b1dd34e0-06e2-5aab-8aa6-8cd474803148",
+      "name": "Sticky Note A",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Answer with memory\nThe model writes the recall query. The identity always comes from Telegram, never from the model.",
+        "height": 520,
+        "width": 560,
+        "color": 7
+      },
+      "id": "c1b0b39c-abb9-5cee-9593-65cceabda2a4",
+      "name": "Sticky Note B",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        220,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Reply and remember\nSend the answer, then save the exchange with its real time and a stable Source ID.",
+        "height": 300,
+        "width": 480,
+        "color": 7
+      },
+      "id": "612fa393-c96d-502d-9379-1ef61f180bd3",
+      "name": "Sticky Note C",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        820,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "content": "**Restrict the bot.** Add your Telegram user IDs in this node, or anyone who finds the bot can read the memory.",
+        "height": 150,
+        "width": 210,
+        "color": 3
+      },
+      "id": "70f97001-d236-5b10-bff2-b129e004870b",
+      "name": "Sticky Note Warn",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -250,
+        190
+      ]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "98c8971d-0090-5e76-8459-6d29c01784e7",
+      "name": "Receive Telegram message",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -200,
+        0
+      ],
+      "webhookId": "c09a8061-68eb-563c-9bab-d2a9539f91ec"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "147e7898-206c-5c32-9b47-6850155f1c1d",
+              "leftValue": "={{ $json.message.text }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "41828091-e2ac-512d-8582-ed37e36c10cc",
+      "name": "Message has text",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        20,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }}",
+        "options": {
+          "systemMessage": "=You are a helpful assistant in Telegram. Today is {{ $now.toFormat('cccc d LLLL yyyy') }}.\n\nYou have a long-term memory. Before you answer a question about the user, earlier conversations, decisions, plans or facts, call the tool \"Recall from past.dev\" with a precise question. Use what it returns, and say when a fact is old. If the memory has nothing, say that you don't know yet. Never invent a memory.\n\nKeep answers short. Use plain text, no Markdown."
+        }
+      },
+      "id": "f9cdba7b-c7a9-5252-8dd4-311d4b6be9d9",
+      "name": "Answer with memory",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        300,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "id": "353260d4-fef5-51df-9b5c-bb1453f52686",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        260,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Receive Telegram message').item.json.message.chat.id }}",
+        "contextWindowLength": 10
+      },
+      "id": "206bea11-3e88-57bf-9130-ddac61d2041a",
+      "name": "Keep this chat session",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        420,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Recall what is known from long-term memory about the user, earlier conversations, decisions and facts. Give a precise question as the query.",
+        "resource": "memory",
+        "operation": "recall",
+        "query": "={{ $fromAI('query', 'The question to look up in memory', 'string') }}",
+        "identity": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ 'telegram-' + $('Receive Telegram message').item.json.message.from.id }}"
+        },
+        "options": {
+          "limit": 10
+        }
+      },
+      "id": "90857c04-9823-54b2-9bab-c9ed88a22d06",
+      "name": "Recall from past.dev",
+      "type": "n8n-nodes-pastdotdev.pastDevTool",
+      "typeVersion": 1,
+      "position": [
+        600,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Receive Telegram message').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "07d1a7b9-05b5-52a1-8f61-50b286ceb76d",
+      "name": "Send the answer",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        880,
+        0
+      ],
+      "webhookId": "3e221285-959c-5080-954e-6b7c48592c34"
+    },
+    {
+      "parameters": {
+        "resource": "memory",
+        "operation": "ingest",
+        "content": "=User: {{ $('Receive Telegram message').item.json.message.text }}\nAssistant: {{ $('Answer with memory').item.json.output }}",
+        "identity": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ 'telegram-' + $('Receive Telegram message').item.json.message.from.id }}"
+        },
+        "additionalFields": {
+          "id": "=telegram-{{ $('Receive Telegram message').item.json.message.chat.id }}-{{ $('Receive Telegram message').item.json.message.message_id }}",
+          "timestamp": "={{ DateTime.fromSeconds($('Receive Telegram message').item.json.message.date).toUTC().toISO() }}",
+          "label": "Telegram conversation"
+        }
+      },
+      "id": "f85caa97-c574-5f55-968b-26b97a66bfce",
+      "name": "Save the exchange to memory",
+      "type": "n8n-nodes-pastdotdev.pastDev",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        0
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "maxTries": 3
+    }
+  ],
+  "connections": {
+    "Receive Telegram message": {
+      "main": [
+        [
+          {
+            "node": "Message has text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message has text": {
+      "main": [
+        [
+          {
+            "node": "Answer with memory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Answer with memory",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keep this chat session": {
+      "ai_memory": [
+        [
+          {
+            "node": "Answer with memory",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recall from past.dev": {
+      "ai_tool": [
+        [
+          {
+            "node": "Answer with memory",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer with memory": {
+      "main": [
+        [
+          {
+            "node": "Send the answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send the answer": {
+      "main": [
+        [
+          {
+            "node": "Save the exchange to memory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
