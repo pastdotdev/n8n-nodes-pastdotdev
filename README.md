@@ -141,6 +141,12 @@ and paste the file contents into the canvas (or select **Import from File**). Th
 - [`delete-data-point.json`](examples/delete-data-point.json): a webhook receives a source ID and
   deletes that data point.
 
+### Templates
+
+The folder [`templates/`](templates/) has five complete workflows for common AI use cases: a Telegram
+assistant with long-term memory, Gmail reply drafts with the customer's history, a Slack assistant
+with company memory, a chat on Google Drive documents, and Slack briefs before Calendly calls.
+
 ## Errors and credits
 
 Each Ingest and each Recall spends credits of your past dev organization. The credential test and
